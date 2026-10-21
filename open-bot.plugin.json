@@ -1,0 +1,80 @@
+{
+  "$schema": "/home/agent/.config/opencode/skills/plugin/open-bot.plugin.schema.json",
+  "id": "quick-video",
+  "name": "Quick Video",
+  "version": "0.1.0",
+  "description": "Vidéos finies à partir de modèles : un texte, un template, un MP4 1080p (16:9 ou 9:16) dans le workspace — citation animée, verset du jour, annonce avec CTA, hook <3 s, liste numérotée. Propulsé par Remotion, rendu 100 % local.",
+  "author": "shpaw415",
+  "repo": "shpaw415/quick-video",
+  "category": "video",
+  "tags": ["video", "templates", "youtube", "shorts", "remotion", "motion"],
+
+  "configs": [
+    { "key": "output_dir", "label": "Dossier de sortie des MP4", "type": "string", "def": "/home/agent/workspace/quick-video" },
+    { "key": "render_timeout_s", "label": "Timeout de rendu (secondes)", "type": "number", "def": "900", "min": 60, "max": 3600 },
+    { "key": "default_format", "label": "Format par défaut", "type": "enum", "def": "16:9", "options": ["16:9", "9:16"] }
+  ],
+
+  "files": [
+    { "name": "mcp.ts", "source": "mcp/mcp.ts", "exec": true },
+    { "name": "renderer.ts", "source": "render/renderer.ts", "exec": true },
+    { "name": "registry.json", "source": "remotion/src/registry.json" },
+    { "name": "install.sh", "source": "setup/install.sh", "exec": true },
+    { "name": "server.ts", "source": "server/server.ts", "exec": true },
+    { "name": "index.html", "source": "server/index.html" },
+    { "name": "app.ts", "source": "server/app.ts" },
+    { "name": "styles.css", "source": "server/styles.css" },
+    { "name": "engine-package.json", "source": "remotion/package.json" },
+    { "name": "engine-tsconfig.json", "source": "remotion/tsconfig.json" },
+    { "name": "engine-config.ts", "source": "remotion/remotion.config.ts" },
+    { "name": "engine-index.ts", "source": "remotion/src/index.ts" },
+    { "name": "engine-root.tsx", "source": "remotion/src/Root.tsx" },
+    { "name": "engine-props.ts", "source": "remotion/src/props.ts" },
+    { "name": "engine-theme.ts", "source": "remotion/src/theme.ts" },
+    { "name": "engine-motion.ts", "source": "remotion/src/motion.ts" },
+    { "name": "engine-wrap.ts", "source": "remotion/src/wrap.ts" },
+    { "name": "engine-tmpl-quote.tsx", "source": "remotion/src/templates/quote.tsx" },
+    { "name": "engine-tmpl-verse.tsx", "source": "remotion/src/templates/verse.tsx" },
+    { "name": "engine-tmpl-announce.tsx", "source": "remotion/src/templates/announce.tsx" },
+    { "name": "engine-tmpl-hook.tsx", "source": "remotion/src/templates/hook.tsx" },
+    { "name": "engine-tmpl-list.tsx", "source": "remotion/src/templates/list.tsx" }
+  ],
+
+  "dashboard": {
+    "pages": { "entry": "server.ts", "ui": "server/index.html" },
+    "tabs": [{ "id": "quick-video", "title": "Quick Video", "icon": "🎬", "kind": "app" }]
+  },
+
+  "skills": [
+    {
+      "name": "quick-video",
+      "description": "Load when the user wants a ready-made video from text — animated quote, verse of the day, announcement with CTA, <3 s hook, numbered list — with the quick-video plugin (templates, not custom motion design). Covers template choice, render tool calls, limits, audio muxing and deliverable rules. Always answer in the user's language.",
+      "body": "# Quick Video — templates vidéo prêts à l'emploi\n\nRend des MP4 finis à partir de templates via les outils MCP `quick-video_list_templates` et `quick-video_render`. Toujours répondre dans la langue de l'utilisateur.\n\n## Règle de langue\nDétecte la langue de l'utilisateur et réponds dedans. Jamais de langue par défaut.\n\n## Quand l'utiliser\nL'utilisateur veut une vidéo finie à partir d'un texte : citation animée (`quote`), verset du jour (`verse`), annonce/lancement avec bouton (`announce`), accroche < 3 s (`hook`), récap/liste 3-5 points (`list`). Si la demande est du motion design sur mesure ou du montage complexe, c'est le terrain d'effectcraft-video (Video Creator) — redirige.\n\n## Flux\n1. `quick-video_list_templates` pour les limites à jour (longueurs, params, durées).\n2. Choisis le template adapté et proposes le texte si l'utilisateur ne l'a pas fourni. 16:9 pour YouTube, 9:16 pour shorts/Reels/TikTok.\n3. Confirme le texte final avec l'utilisateur AVANT de rendre (le rendu est CPU : 1-3 min ; au-delà de ~20 s de vidéo, demande une confirmation explicite).\n4. `quick-video_render` avec {template, text, options:{format, theme, accent, params, audio_path?}}.\n5. Livre le fichier dans la réponse : ![description](chemin du MP4) — jamais un chemin nu.\n\n## Spécificités par template\n- quote : params author/role optionnels. verse : reference requise (ex. « Jean 3:16 »), translation/kicker optionnels. announce : params kicker/subtitle/cta optionnels. hook : `*mot*` dans le texte = surligné. list : params.items = 3 à 5 points (tableau de chaînes ≤ 64 caractères), number_style = chiffres|points|coches.\n- Palettes : dark (Nuit) ou light (Jour). accent : hex #RRGGBB pour marquer la marque.\n\n## Audio / voix\n- `options.audio_path` : chemin d'une piste existante (wav/mp3/m4a/aac/ogg) muxée au rendu.\n- Compagnons voix optionnels : s'ils sont absents, le rendu réussit en muet avec un avertissement `voice_skipped` — mentionne-le simplement.\n\n## Erreurs\nChaque échec renvoie {ok:false, error:{code, message, hint?, details?}}. Codes : TEMPLATE_NOT_FOUND, INVALID_PARAMS (détails par champ), ENGINE_NOT_INSTALLED (→ quick-video-doctor), RENDER_TIMEOUT, RENDER_BUSY (un rendu à la fois — attends et réessaie). Ne montre les détails techniques que si l'utilisateur les demande.\n\n## Limites\nTextes longs → refuse et propose de raccourcir (les limites protègent la lisibilité). Le rendu est déterministe : le même texte donne la même vidéo.\n"
+    },
+    {
+      "name": "quick-video-doctor",
+      "description": "Load when quick-video renders fail (ENGINE_NOT_INSTALLED, RENDER_FAILED, BROWSER_MISSING) or before first use after a desktop rebuild; checks Node/npm, the Remotion engine at /opt/quick-video/remotion, the headless browser, and runs a smoke render. Always answer in the user's language.",
+      "body": "# Quick Video doctor\n\nDiagnostic du moteur quick-video. Toujours répondre dans la langue de l'utilisateur.\n\n## Vérifications (dans l'ordre)\n1. `node --version && npm --version` — Node est requis (Remotion ne tourne pas sous Bun).\n2. Moteur : `/opt/quick-video/remotion/node_modules/.bin/remotion` et `/opt/quick-video/remotion/src/index.ts` existent.\n3. Navigateur headless : `cd /opt/quick-video/remotion && npx remotion browser ensure` (télécharge Chrome Headless Shell si absent).\n4. Rendu de fumée : `cd /opt/quick-video/remotion && printf '%s' '{\"format\":\"16:9\",\"theme\":\"dark\",\"text\":\"Smoke\"}' > /tmp/qv-smoke-props.json && npx remotion render src/index.ts hook /tmp/qv-smoke.mp4 --props /tmp/qv-smoke-props.json --codec h264 --crf 18 --log error` — doit produire un MP4 > 10 Ko.\n5. Logs : `~/.open-bot/plugin-quick-video/jobs/*/stderr.log` (dernier échec), `~/.open-bot/plugin-quick-video/install.log`.\n\n## Réparations\n- Moteur absent → réinstalle le plugin (ob-plugin install) : le setup réassemble et réinstalle tout, idempotent.\n- npm cassé → `cd /opt/quick-video/remotion && rm -rf node_modules && npm install`.\n- Navigateur absent → `npx remotion browser ensure`.\n- RENDER_TIMEOUT → augmente le réglage render_timeout_s ou raccourcis la vidéo.\n\nNettoie /tmp/qv-smoke* après le test. Ne supprime jamais les MP4 du workspace de l'utilisateur.\n"
+    }
+  ],
+
+  "setup": {
+    "commands": ["bash /usr/local/bin/ob-plugin-quick-video-install.sh"],
+    "uninstall": [
+      "rm -rf /opt/quick-video",
+      "rm -rf /home/agent/.open-bot/plugin-quick-video",
+      "rm -rf /home/agent/.open-bot/pages-data/quick-video"
+    ]
+  },
+
+  "opencode": {
+    "mcp": {
+      "quick-video": {
+        "type": "local",
+        "command": ["bun", "/usr/local/bin/ob-plugin-quick-video-mcp.ts"],
+        "enabled": true
+      }
+    },
+    "agentsMd": "## Quick Video (plugin)\n- Renders go through the quick-video MCP tools (render, list_templates). Confirm the final text with the user BEFORE rendering (CPU-bound, 1-3 min; ask explicit confirmation beyond ~20 s of video).\n- Deliverables land in the configured output dir under the workspace; embed them in the reply as ![description](path).\n- No voice companion is required: with audio_path the track is muxed; without it the video is silent with a voice_skipped warning — never an error.\n"
+  }
+}

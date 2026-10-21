@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "fps": 30,
+  "sizes": {
+    "16:9": [1920, 1080],
+    "9:16": [1080, 1920]
+  },
+  "templates": [
+    {
+      "id": "quote",
+      "name": "Carte citation",
+      "description": "Citation animée ligne par ligne, guillemet géant, attribution en dernier.",
+      "duration_s": 8,
+      "text_param": "text",
+      "text_label": "Citation",
+      "text_maxlen": 220,
+      "params": [
+        { "key": "author", "type": "string", "required": false, "maxlen": 48, "label": "Auteur" },
+        { "key": "role", "type": "string", "required": false, "maxlen": 48, "label": "Rôle / organisation" }
+      ]
+    },
+    {
+      "id": "verse",
+      "name": "Verset du jour",
+      "description": "Verset en cascade de mots, référence en accent — séries quotidiennes et shorts.",
+      "duration_s": 10,
+      "text_param": "text",
+      "text_label": "Verset",
+      "text_maxlen": 300,
+      "params": [
+        { "key": "reference", "type": "string", "required": true, "maxlen": 24, "label": "Référence" },
+        { "key": "translation", "type": "string", "required": false, "maxlen": 12, "label": "Traduction" },
+        { "key": "kicker", "type": "string", "required": false, "maxlen": 24, "default": "Verset du jour", "label": "Surtitre" }
+      ]
+    },
+    {
+      "id": "announce",
+      "name": "Annonce",
+      "description": "Kicker, gros titre, sous-titre et bouton d'action — lancements et nouvelles.",
+      "duration_s": 12,
+      "text_param": "title",
+      "text_label": "Titre",
+      "text_maxlen": 60,
+      "params": [
+        { "key": "kicker", "type": "string", "required": false, "maxlen": 20, "default": "Nouveau", "label": "Surtitre" },
+        { "key": "subtitle", "type": "string", "required": false, "maxlen": 110, "label": "Sous-titre" },
+        { "key": "cta", "type": "string", "required": false, "maxlen": 24, "label": "Bouton d'action" }
+      ]
+    },
+    {
+      "id": "hook",
+      "name": "Hook court",
+      "description": "Accroche de moins de 3 secondes, texte plein cadre, *mot* surligné.",
+      "duration_s": 2.8,
+      "text_param": "text",
+      "text_label": "Accroche",
+      "text_maxlen": 60,
+      "params": []
+    },
+    {
+      "id": "list",
+      "name": "Liste / récap",
+      "description": "Titre et 3 à 5 points numérotés, un item toutes les deux secondes.",
+      "duration_s": null,
+      "duration_formula": "75 + 60 × nombre d'items (frames)",
+      "text_param": "title",
+      "text_label": "Titre de la liste",
+      "text_maxlen": 48,
+      "params": [
+        {
+          "key": "items",
+          "type": "string[]",
+          "required": true,
+          "min_items": 3,
+          "max_items": 5,
+          "item_maxlen": 64,
+          "label": "Points de la liste"
+        },
+        {
+          "key": "number_style",
+          "type": "enum",
+          "options": ["chiffres", "points", "coches"],
+          "default": "chiffres",
+          "label": "Style de numéros"
+        }
+      ]
+    }
+  ],
+  "common_params": [
+    { "key": "format", "type": "enum", "options": ["16:9", "9:16"], "default": "16:9", "label": "Format" },
+    { "key": "theme", "type": "enum", "options": ["dark", "light"], "default": "dark", "label": "Palette" },
+    { "key": "accent", "type": "string", "required": false, "pattern": "^#[0-9a-fA-F]{6}$", "label": "Couleur d'accent (hex #RRGGBB)" }
+  ]
+}

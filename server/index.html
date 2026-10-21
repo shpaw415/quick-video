@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quick Video</title>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search).get('theme');
+  var mq = matchMedia('(prefers-color-scheme: dark)');
+  var apply = function () {
+    document.documentElement.dataset.theme =
+      (q === 'dark' || q === 'light') ? q : (mq.matches ? 'dark' : 'light');
+  };
+  apply();
+  (mq.addEventListener ? mq.addEventListener('change', apply) : mq.addListener(apply));
+})();
+window.__QV_TOKEN__ = "__QV_TOKEN__";
+</script>
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<div class="page" data-palette="dark">
+  <header>
+    <h1>🎬 Quick Video</h1>
+    <p class="status" id="engine-status"><span class="dot dot-wait"></span><span data-t="status.checking">Vérification du moteur…</span></p>
+  </header>
+
+  <div class="alert" id="fatal" role="alert" hidden>
+    <strong data-t="err.connect">Impossible de joindre le plugin.</strong>
+    <span class="alert-detail" id="fatal-detail"></span>
+    <button type="button" id="fatal-retry" data-t="err.retry">Réessayer</button>
+  </div>
+
+  <main class="col-main">
+    <section aria-labelledby="h-templates">
+      <h2 id="h-templates"><span class="step">①</span> <span data-t="sec.templates">Choisir un template</span></h2>
+      <div class="tpl-grid" id="tpl-grid" role="group" aria-label="Template"></div>
+    </section>
+
+    <section aria-labelledby="h-content">
+      <h2 id="h-content"><span class="step">②</span> <span data-t="sec.content">Contenu</span></h2>
+      <div id="form"></div>
+    </section>
+
+    <section aria-labelledby="h-generate">
+      <h2 id="h-generate"><span class="step">④</span> <span data-t="sec.generate">Générer</span></h2>
+      <button type="button" class="primary" id="generate" data-t="gen.go">Générer le MP4</button>
+      <div class="progress" id="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" hidden>
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+      <p class="progress-label" id="progress-label" aria-live="polite" hidden data-t="progress.running">Rendu en cours… (typique : 1 à 3 minutes)</p>
+      <div class="success" id="success" role="status" hidden>
+        <strong data-t="gen.done">✅ Vidéo prête</strong>
+        <code id="success-path"></code>
+        <div class="row">
+          <button type="button" id="copy-path" data-t="hist.copy">Copier le chemin</button>
+          <a id="success-video" data-t="gen.watch" href="#" target="_blank" rel="noopener">Voir la vidéo</a>
+        </div>
+        <video id="success-player" controls width="320"></video>
+      </div>
+    </section>
+  </main>
+
+  <aside class="col-side">
+    <section aria-labelledby="h-preview">
+      <h2 id="h-preview"><span class="step">③</span> <span data-t="sec.preview">Aperçu</span></h2>
+      <svg id="preview" viewBox="0 0 320 180" role="img" aria-label="Aperçu" preserveAspectRatio="xMidYMid meet"></svg>
+      <label class="check"><input type="checkbox" id="safe-toggle"><span data-t="preview.safe">Zones sûres (recouvrement YouTube/Shorts)</span></label>
+    </section>
+    <section aria-labelledby="h-history">
+      <h2 id="h-history"><span class="step">⑤</span> <span data-t="sec.history">Historique</span></h2>
+      <ul class="hist" id="history"></ul>
+      <p class="empty" id="history-empty" data-t="hist.empty">Aucun rendu pour l'instant — ton premier MP4 est à 3 champs d'ici.</p>
+    </section>
+  </aside>
+</div>
+<script src="./app.ts"></script>
+</body>
+</html>
