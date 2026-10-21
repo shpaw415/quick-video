@@ -154,6 +154,7 @@ async function init(): Promise<void> {
     const data = await api<{ templates: TemplateDef[]; engine: { installed: boolean; hint?: string }; busy: boolean }>("api/templates");
     templates = data.templates;
     setStatus(data.engine.installed ? (data.busy ? "busy" : "ok") : "missing", data.engine.hint);
+    $("fatal").hidden = true; // succès : la bannière d'échec précédente disparaît
     renderTemplateCards();
     if (templates.length) {
       selected = templates[0].id;
@@ -164,6 +165,27 @@ async function init(): Promise<void> {
     showFatal(e instanceof Error ? e.message : String(e));
   }
 }
+
+// Auto-guérison : si la bannière d'erreur est visible (ex. redémarrage du serveur
+// de page pendant que l'onglet était ouvert), on retente toutes les 30 s —
+// l'utilisateur n'a pas à deviner qu'un « Réessayer » suffit.
+setInterval(() => {
+  if ($("fatal").hidden) return;
+  void (async () => {
+    try {
+      const data = await api<{ templates: TemplateDef[]; engine: { installed: boolean }; busy: boolean }>("api/templates");
+      templates = data.templates;
+      setStatus(data.engine.installed ? (data.busy ? "busy" : "ok") : "missing", data.engine.hint);
+      $("fatal").hidden = true;
+      renderTemplateCards();
+      if (templates.length && !templates.some((x) => x.id === selected)) selected = templates[0].id;
+      if (selected) selectTemplate(selected);
+      void refreshHistory();
+    } catch {
+      // toujours en panne : la bannière reste, on retentera au prochain tick
+    }
+  })();
+}, 30_000);
 
 function setStatus(kind: "ok" | "missing" | "busy", hint?: string): void {
   const el = $("engine-status");
