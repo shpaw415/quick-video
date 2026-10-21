@@ -121,7 +121,10 @@ const HTML_HEADERS = { "content-type": "text/html; charset=utf-8", "cache-contro
 
 function withToken(html: string): string {
   const safe = TOKEN.replace(/[^A-Za-z0-9._-]/g, "");
-  return html.replace(/__QV_TOKEN__/g, () => safe);
+  // Uniquement la chaîne quotée du script inline — JAMAIS le glob bare :
+  // le nom de propriété window.__QV_TOKEN__ du code bundlé contient le même
+  // texte et un remplacement global le corrompt (window.<token> = syntax error).
+  return html.replace(/"__QV_TOKEN__"/g, () => `"${safe}"`);
 }
 
 async function checkoutUiRoutes(): Promise<Record<string, unknown> | null> {
