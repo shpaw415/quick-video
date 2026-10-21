@@ -10,18 +10,13 @@ import * as fs from "node:fs";
 const PORT = Number(process.env.OPEN_BOT_PAGE_PORT ?? 4747);
 const TOKEN = process.env.OPEN_BOT_PAGE_TOKEN ?? "";
 
-function authorized(
-  req: Request,
-  server?: { requestIP(req: Request): { address: string } | null } | null,
-): boolean {
-  if (!TOKEN) return true;
-  const h = req.headers.get("x-open-bot-page-token");
-  if (h === TOKEN) return true;
-  // dev-preview et loopback uniquement (pattern totp-vault)
-  const ip = server?.requestIP?.(req)?.address ?? "";
-  const loopback = /^(::ffff:)?127\.0\.0\.1$|^::1$/.test(ip);
-  if (!loopback) return false;
-  return h === "dev-preview" || !h;
+// Une seule règle : token exact exigé dès qu'un vrai token est configuré.
+// Sans token (ou en preview runtime, token littéral "dev-preview"), la page
+// est ouverte — c'est le mode développement explicite, jamais un backdoor :
+// en production le dashboard et les /hooks injectent toujours le vrai token.
+function authorized(req: Request): boolean {
+  if (!TOKEN || TOKEN === "dev-preview") return true;
+  return req.headers.get("x-open-bot-page-token") === TOKEN;
 }
 
 function json(data: unknown, status = 200): Response {
@@ -180,7 +175,7 @@ const pageServer = Bun.serve({
 
     if (path === "/healthz") return new Response("ok");
 
-    if (!authorized(req, pageServer)) return json({ error: "unauthorized" }, 403);
+    if (!authorized(req)) return json({ error: "unauthorized" }, 403);
 
     if (req.method === "GET" && path === "/api/templates") {
       const engine = R.engineStatus();

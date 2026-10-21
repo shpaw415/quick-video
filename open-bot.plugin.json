@@ -2,7 +2,7 @@
   "$schema": "/home/agent/.config/opencode/skills/plugin/open-bot.plugin.schema.json",
   "id": "quick-video",
   "name": "Quick Video",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Vidéos finies à partir de modèles : un texte, un template, un MP4 1080p (16:9 ou 9:16) dans le workspace — citation animée, verset du jour, annonce avec CTA, hook <3 s, liste numérotée. Propulsé par Remotion, rendu 100 % local.",
   "author": "shpaw415",
   "repo": "shpaw415/quick-video",
