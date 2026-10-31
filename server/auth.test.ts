@@ -11,6 +11,10 @@ test("page auth protects UI, APIs and videos in checkout and frozen modes", asyn
     "QUICK_VIDEO_CONFIG", "QUICK_VIDEO_OUTPUT_DIR", "QUICK_VIDEO_REGISTRY",
   ];
   const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+  const source = process.env.QUICK_VIDEO_AUTH_TEST_SERVER ?? "./server.ts";
+  // Installed payloads are flattened and always receive OPEN_BOT_PAGE_UI.
+  // Checkout-only relative source files do not exist beside the installed server.
+  const uiModes = process.env.QUICK_VIDEO_AUTH_TEST_SERVER ? [true] : [false, true];
   let cases = 0;
   try {
     for (const dir of ["data", "state", "output"]) mkdirSync(join(root, dir));
@@ -29,13 +33,12 @@ test("page auth protects UI, APIs and videos in checkout and frozen modes", asyn
     }]);
     writeFileSync(join(root, "data/jobs.json"), jobs);
 
-    for (const frozen of [false, true]) {
+    for (const frozen of uiModes) {
       if (frozen) process.env.OPEN_BOT_PAGE_UI = join(root, "ui.html");
       else delete process.env.OPEN_BOT_PAGE_UI;
       for (const token of [undefined, "test-production-token", "dev-preview", 'test-<tag>-"quote"']) {
         if (token === undefined) delete process.env.OPEN_BOT_PAGE_TOKEN;
         else process.env.OPEN_BOT_PAGE_TOKEN = token;
-        const source = process.env.QUICK_VIDEO_AUTH_TEST_SERVER ?? "./server.ts";
         const { default: server } = await import(`${source}?auth-case=${cases++}`);
         const base = `http://127.0.0.1:${server.port}`;
         try {
@@ -70,7 +73,7 @@ test("page auth protects UI, APIs and videos in checkout and frozen modes", asyn
         }
       }
     }
-    expect(cases).toBe(8);
+    expect(cases).toBe(uiModes.length * 4);
   } finally {
     for (const key of keys) {
       if (previous[key] === undefined) delete process.env[key];
