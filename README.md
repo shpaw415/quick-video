@@ -46,3 +46,17 @@ Le rendu est CPU : une vidéo de 3-12 s prend typiquement **1 à 3 minutes**. Le
 ## Développement
 
 Sources : `~/plugins-create/quick-video` (moteur Remotion dans `remotion/`, jamais importé par Bun — frontière subprocess). Specs de conception du conseil : `docs/` (architecture, templates, design, formats YouTube).
+
+### Authentification et tests
+
+Le serveur exige un `OPEN_BOT_PAGE_TOKEN` non vide et une correspondance exacte
+du header `x-open-bot-page-token` sur toutes les routes, y compris la page HTML.
+Seul `/healthz` est public. Le proxy du dashboard fournit ce header ; un accès
+direct sans header, même depuis localhost, renvoie 403. Un aperçu local doit lui
+aussi transmettre le token configuré : `dev-preview` n'est pas une exception.
+
+`bun test server/auth.test.ts` vérifie les modes checkout et UI figée avec des
+données jetables, sans lancer de rendu ni toucher à l'historique utilisateur.
+Pour vérifier la copie installée, ajouter
+`QUICK_VIDEO_AUTH_TEST_SERVER=/usr/local/bin/ob-plugin-quick-video-server.ts`
+à cette commande. Voir [CHANGELOG.md](CHANGELOG.md) pour les correctifs publiés.

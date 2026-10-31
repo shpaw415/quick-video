@@ -10,13 +10,10 @@ import * as fs from "node:fs";
 const PORT = Number(process.env.OPEN_BOT_PAGE_PORT ?? 4747);
 const TOKEN = process.env.OPEN_BOT_PAGE_TOKEN ?? "";
 
-// Une seule règle : token exact exigé dès qu'un vrai token est configuré.
-// Sans token (ou en preview runtime, token littéral "dev-preview"), la page
-// est ouverte — c'est le mode développement explicite, jamais un backdoor :
-// en production le dashboard et les /hooks injectent toujours le vrai token.
+// Fail closed, including local callers and preview: only the exact configured
+// token is accepted. Health probes are the sole unauthenticated endpoint.
 function authorized(req: Request): boolean {
-  if (!TOKEN || TOKEN === "dev-preview") return true;
-  return req.headers.get("x-open-bot-page-token") === TOKEN;
+  return TOKEN.length > 0 && req.headers.get("x-open-bot-page-token") === TOKEN;
 }
 
 function json(data: unknown, status = 200): Response {
@@ -120,11 +117,18 @@ function bump(job: Job): void {
 const HTML_HEADERS = { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache" };
 
 function withToken(html: string): string {
-  const safe = TOKEN.replace(/[^A-Za-z0-9._-]/g, "");
+  const safe = JSON.stringify(TOKEN).replace(/</g, "\\u003c");
   // Uniquement la chaîne quotée du script inline — JAMAIS le glob bare :
   // le nom de propriété window.__QV_TOKEN__ du code bundlé contient le même
   // texte et un remplacement global le corrompt (window.<token> = syntax error).
-  return html.replace(/"__QV_TOKEN__"/g, () => `"${safe}"`);
+  return html.replace(/"__QV_TOKEN__"/g, () => safe);
+}
+
+// Bun's static routes run before fetch(), so the UI needs its own guard. It
+// contains the token and must never disclose it to an unauthenticated caller.
+function uiResponse(req: Request, html: string): Response {
+  if (!authorized(req)) return json({ error: "unauthorized" }, 403);
+  return new Response(withToken(html), { headers: HTML_HEADERS });
 }
 
 async function checkoutUiRoutes(): Promise<Record<string, unknown> | null> {
@@ -140,7 +144,7 @@ async function checkoutUiRoutes(): Promise<Record<string, unknown> | null> {
       .replace(/<script src="\.?\/?app\.ts"><\/script>/, () => `<script type="module">\n${js}\n</script>`);
     if (inlined === html) return null;
     return {
-      "/": (): Response => new Response(withToken(inlined), { headers: HTML_HEADERS }),
+      "/": (req: Request): Response => uiResponse(req, inlined),
     };
   } catch {
     return null;
@@ -149,15 +153,16 @@ async function checkoutUiRoutes(): Promise<Record<string, unknown> | null> {
 
 const routes: Record<string, unknown> = process.env.OPEN_BOT_PAGE_UI
   ? {
-      "/": async (): Promise<Response> =>
-        new Response(withToken(await Bun.file(process.env.OPEN_BOT_PAGE_UI as string).text()), {
-          headers: HTML_HEADERS,
-        }),
+      "/": async (req: Request): Promise<Response> => {
+        if (!authorized(req)) return json({ error: "unauthorized" }, 403);
+        return uiResponse(req, await Bun.file(process.env.OPEN_BOT_PAGE_UI as string).text());
+      },
     }
   : (await checkoutUiRoutes()) ?? {
-      "/": async (): Promise<Response> => {
+      "/": async (req: Request): Promise<Response> => {
+        if (!authorized(req)) return json({ error: "unauthorized" }, 403);
         const mod = await import("./index.html");
-        return new Response(withToken(await new Response(mod.default.body).text()), { headers: HTML_HEADERS });
+        return uiResponse(req, await new Response(mod.default.body).text());
       },
     };
 
@@ -234,3 +239,5 @@ const pageServer = Bun.serve({
     return json({ error: "not found" }, 404);
   },
 });
+
+export default pageServer;
